@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Form Submission Demo</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 2em;
+            }
+            form {
+                max-width: 400px;
+                margin: auto;
+            }
+            label {
+                display: block;
+                margin-top: 1em;
+            }
+            input,
+            textarea {
+                width: 100%;
+                padding: 0.5em;
+            }
+            button {
+                margin-top: 1em;
+                padding: 0.5em 1em;
+            }
+            .success {
+                color: green;
+            }
+            .error {
+                color: red;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Submit a Form</h1>
+        <form id="demoForm">
+            <label>Name: <input type="text" name="name" required /></label>
+            <label>Email: <input type="email" name="email" required /></label>
+            <label
+                >Message: <textarea name="message" required></textarea>
+            </label>
+            <button type="submit">Send</button>
+        </form>
+        <div id="result"></div>
+        <script>
+            document
+                .getElementById("demoForm")
+                .addEventListener("submit", async function (e) {
+                    e.preventDefault();
+                    const form = e.target;
+                    const data = new FormData(form);
+                    const resultDiv = document.getElementById("result");
+                    resultDiv.textContent = "";
+                    try {
+                        const response = await fetch("/api/forms/submit", {
+                            method: "POST",
+                            body: data,
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            resultDiv.textContent =
+                                "Form submitted successfully!";
+                            resultDiv.className = "success";
+                            form.reset();
+                        } else {
+                            resultDiv.textContent = "Submission failed.";
+                            resultDiv.className = "error";
+                        }
+                    } catch (err) {
+                        resultDiv.textContent = "Error: " + err.message;
+                        resultDiv.className = "error";
+                    }
+                });
+        </script>
+    </body>
+</html>
