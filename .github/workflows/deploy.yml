@@ -1,23 +1,13 @@
-name: Deploy Laravel to Digital Ocean
+name: Deploy to Production
 
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: testing
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout code
@@ -27,136 +17,90 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, bcmath
+          extensions: mbstring, xml, curl, zip, bcmath, gd, intl
           coverage: none
 
-      - name: Copy environment file
-        run: cp .env.example .env
-
       - name: Install Composer dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader --no-dev
-
-      - name: Generate application key
-        run: php artisan key:generate
-
-      - name: Set testing database
-        run: |
-          sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=mysql/g' .env
-          sed -i 's/DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/g' .env
-          sed -i 's/DB_PORT=3306/DB_PORT=3306/g' .env
-          sed -i 's/DB_DATABASE=laravel/DB_DATABASE=testing/g' .env
-          sed -i 's/DB_USERNAME=root/DB_USERNAME=root/g' .env
-          sed -i 's/DB_PASSWORD=/DB_PASSWORD=password/g' .env
-
-      - name: Run database migrations
-        run: php artisan migrate --force
-
-      - name: Run tests
-        run: php artisan test
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
-      - name: Install Node dependencies
+      - name: Install NPM dependencies
         run: npm ci
 
       - name: Build assets
         run: npm run build
 
+      - name: Create deployment artifact
+        run: tar -czf app.tar.gz --exclude='.git' --exclude='node_modules' --exclude='tests' .
+
       - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: ${{ secrets.DROPLET_USER }}
-          key: ${{ secrets.DROPLET_SSH_KEY }}
-          script_stop: true
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "app.tar.gz"
+          target: "/tmp/"
+
+      - name: Execute deployment commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
 
-            # Configuration
-            DEPLOY_PATH="${{ secrets.DROPLET_PATH }}"
-            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
-            RELEASE_NAME="release_$(date +%Y%m%d_%H%M%S)"
+            # Navigate to web directory
+            cd /var/www/laravel
 
-            # Create deployment structure
-            mkdir -p $DEPLOY_PATH/{releases,shared,shared/storage}
-
-            # Clone latest code
-            echo "🔄 Cloning latest code..."
-            git clone --depth 1 --branch ${{ github.ref_name }} $REPO_URL $DEPLOY_PATH/releases/$RELEASE_NAME
-            cd $DEPLOY_PATH/releases/$RELEASE_NAME
-
-            # Copy built assets from previous step
-            # (In real deployment, you'd sync the built assets)
-
-            # Install dependencies
-            echo "📦 Installing Composer dependencies..."
-            composer install --no-dev --optimize-autoloader --no-interaction
-
-            # Create shared directories if they don't exist
-            mkdir -p $DEPLOY_PATH/shared/storage/{app,framework,logs}
-            mkdir -p $DEPLOY_PATH/shared/storage/framework/{cache,sessions,views}
-            mkdir -p $DEPLOY_PATH/shared/storage/app/public
-
-            # Link shared directories
-            echo "🔗 Linking shared directories..."
-            rm -rf storage
-            ln -nfs $DEPLOY_PATH/shared/storage storage
-
-            # Copy environment file if it doesn't exist in shared
-            if [ ! -f $DEPLOY_PATH/shared/.env ]; then
-                cp .env.example $DEPLOY_PATH/shared/.env
-                echo "⚠️  Please update $DEPLOY_PATH/shared/.env with your configuration"
+            # Backup current version
+            if [ -d "current" ]; then
+              timestamp=$(date +%Y%m%d_%H%M%S)
+              mv current "backup_${timestamp}"
+              # Keep only last 3 backups
+              ls -dt backup_* | tail -n +4 | xargs rm -rf
             fi
 
-            # Link environment file
-            rm -f .env
-            ln -nfs $DEPLOY_PATH/shared/.env .env
+            # Create new release directory
+            mkdir -p releases/$(date +%Y%m%d_%H%M%S)
+            cd releases/$(date +%Y%m%d_%H%M%S)
+
+            # Extract new code
+            tar -xzf /tmp/app.tar.gz
+            rm /tmp/app.tar.gz
+
+            # Copy .env file from previous release or shared
+            if [ -f "/var/www/laravel/shared/.env" ]; then
+              cp /var/www/laravel/shared/.env .env
+            fi
+
+            # Create shared storage link
+            rm -rf storage
+            ln -s /var/www/laravel/shared/storage storage
 
             # Set permissions
-            chmod -R 775 $DEPLOY_PATH/shared/storage
-            chown -R deployer:www-data $DEPLOY_PATH/shared/storage
+            chmod -R 775 bootstrap/cache
 
-            # Laravel deployment steps
-            echo "🚀 Running Laravel deployment steps..."
+            # Run Laravel commands
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             php artisan migrate --force
 
-            # Storage link
-            php artisan storage:link
+            # Create symlink to current release
+            cd /var/www/laravel
+            ln -sfn releases/$(ls -t releases | head -1) current
 
-            # Update current symlink
-            echo "🔄 Updating current release..."
-            ln -nfs $DEPLOY_PATH/releases/$RELEASE_NAME $DEPLOY_PATH/current
+            # Set final permissions
+            sudo chown -R deploy:www-data /var/www/laravel/current
+            sudo chmod -R 775 /var/www/laravel/current/bootstrap/cache
 
-            # Restart services
-            echo "♻️  Restarting services..."
+            # Reload PHP-FPM
             sudo systemctl reload php8.3-fpm
-            sudo systemctl reload nginx
 
-            # Cleanup old releases (keep last 5)
-            echo "🧹 Cleaning up old releases..."
-            cd $DEPLOY_PATH/releases
-            ls -t | tail -n +6 | xargs rm -rf
-
-            echo "✅ Deployment completed successfully!"
-            echo "🌐 Your Laravel app is now live!"
-
-      - name: Health Check
-        run: |
-          sleep 5
-          curl -f http://${{ secrets.DROPLET_HOST }} || exit 1
+            echo "Deployment completed successfully!"
