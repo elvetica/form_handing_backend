@@ -8,4 +8,5 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::get('/forms/submit', function () {
         return response()->json(['message' => 'GET route is working!!!!!!!']);
     });
+    Route::get('/health', fn() => response()->json(['status' => 'ok']));
 });
