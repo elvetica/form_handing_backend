@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -52,5 +54,37 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
+    }
+
+    /**
+     * Show the admin registration form.
+     */
+    public function showRegisterForm()
+    {
+        return view('admin.register');
+    }
+
+    /**
+     * Handle admin registration request.
+     */
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:admins'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $admin = Admin::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        Auth::guard('admin')->login($admin);
+
+        $request->session()->regenerate();
+
+        return redirect()->route('admin.dashboard');
     }
 }
