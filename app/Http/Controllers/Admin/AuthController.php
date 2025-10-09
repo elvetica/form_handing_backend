@@ -81,10 +81,26 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        // Log in the admin so they can access the verification notice page
         Auth::guard('admin')->login($admin);
-
         $request->session()->regenerate();
 
-        return redirect()->route('admin.dashboard');
+        // Try to send verification email
+        try {
+            $admin->sendEmailVerificationNotification();
+
+            return redirect()->route('admin.verification.notice')
+                ->with('success', 'Registration successful! Please check your email to verify your account.');
+        } catch (\Exception $e) {
+            // Log the admin out since registration failed
+            Auth::guard('admin')->logout();
+
+            // Delete the admin account that was just created
+            $admin->delete();
+
+            return redirect()->route('admin.register')
+                ->withInput($request->only('name', 'email'))
+                ->with('error', 'Registration failed: Unable to send verification email. Please try again or contact support.');
+        }
     }
 }

@@ -2,13 +2,26 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FormSubmissionController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\UserController;
 
 Route::get('/', function () {
-    return redirect('/api');
+    return redirect('/admin/login');
+});
+
+Route::get('/api', function () {
+    return response()->json([
+        'message' => 'Form Handling API',
+        'version' => '1.0',
+        'endpoints' => [
+            'POST /api/forms/submit' => 'Submit form data',
+            'GET /api/health' => 'Health check',
+        ],
+        'admin_panel' => url('/admin/login'),
+    ]);
 });
 
 // Admin routes
@@ -19,6 +32,13 @@ Route::prefix('admin')->group(function () {
         Route::post('/login', [AdminAuthController::class, 'login']);
         Route::get('/register', [AdminAuthController::class, 'showRegisterForm'])->name('admin.register');
         Route::post('/register', [AdminAuthController::class, 'register']);
+    });
+
+    // Email verification routes (must be authenticated but not necessarily verified)
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/email/verify', [VerificationController::class, 'notice'])->name('admin.verification.notice');
+        Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->name('admin.verification.verify');
+        Route::post('/email/resend', [VerificationController::class, 'resend'])->name('admin.verification.resend');
     });
 
     // Authenticated admin routes
@@ -44,12 +64,14 @@ Route::prefix('admin')->group(function () {
             'index',
             'show',
             'edit',
-            'update'
+            'update',
+            'destroy'
         ])->names([
                     'index' => 'admin.admins.index',
                     'show' => 'admin.admins.show',
                     'edit' => 'admin.admins.edit',
                     'update' => 'admin.admins.update',
+                    'destroy' => 'admin.admins.destroy',
                 ]);
 
         // Users CRUD

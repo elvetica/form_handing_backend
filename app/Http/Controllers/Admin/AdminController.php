@@ -91,4 +91,28 @@ class AdminController extends Controller
         return redirect()->route('admin.admins.show', $id)
             ->with('success', 'Admin updated successfully.');
     }
+
+    /**
+     * Soft delete the specified admin.
+     */
+    public function destroy($id)
+    {
+        $admin = Admin::find($id);
+
+        if (!$admin) {
+            return redirect()->route('admin.admins.index')
+                ->with('error', 'Admin not found.');
+        }
+
+        // Prevent deleting yourself
+        if ($admin->id === auth('admin')->id()) {
+            return redirect()->route('admin.admins.index')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        $admin->delete();
+
+        return redirect()->route('admin.admins.index')
+            ->with('success', 'Admin deleted successfully.');
+    }
 }

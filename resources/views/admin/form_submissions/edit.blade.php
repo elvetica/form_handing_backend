@@ -5,9 +5,10 @@
 @section('header', 'Edit Form Submission')
 
 @section('content')
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <div class="mb-6">
-            <a href="{{ route('admin.form_submissions.show', $submission->id) }}" class="text-blue-600 hover:text-blue-800">
+            <a href="{{ route('admin.form_submissions.show', $submission->id) }}"
+                class="text-blue-600 hover:text-blue-800 inline-block">
                 ← Back to Details
             </a>
         </div>
@@ -25,10 +26,10 @@
                             </label>
                             @if(is_array($value))
                                 <textarea id="{{ $key }}" name="{{ $key }}" rows="3"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">{{ json_encode($value) }}</textarea>
+                                    class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">{{ json_encode($value) }}</textarea>
                             @else
                                 <input type="text" id="{{ $key }}" name="{{ $key }}" value="{{ old($key, $value) }}"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             @endif
                             @error($key)
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -40,13 +41,13 @@
                 @endif
             </div>
 
-            <div class="mt-6 flex gap-4">
+            <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button type="submit"
-                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
                     Update
                 </button>
                 <a href="{{ route('admin.form_submissions.show', $submission->id) }}"
-                    class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                    class="w-full sm:w-auto text-center bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
                     Cancel
                 </a>
             </div>

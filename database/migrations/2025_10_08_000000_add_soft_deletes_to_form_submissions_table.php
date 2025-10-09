@@ -10,14 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('admins', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
+        Schema::table('form_submissions', function (Blueprint $table) {
             $table->softDeletes();
         });
     }
@@ -27,6 +20,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('admins');
+        Schema::table('form_submissions', function (Blueprint $table) {
+            $table->dropSoftDeletes();
+        });
     }
 };

@@ -20,6 +20,12 @@ class RedirectIfNotAdmin
             return redirect()->route('admin.login');
         }
 
+        $admin = Auth::guard('admin')->user();
+
+        if (!$admin->hasVerifiedEmail()) {
+            return redirect()->route('admin.verification.notice');
+        }
+
         return $next($request);
     }
 }
