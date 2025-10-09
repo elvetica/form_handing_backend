@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\AdminInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -59,9 +60,28 @@ class AuthController extends Controller
     /**
      * Show the admin registration form.
      */
-    public function showRegisterForm()
+    public function showRegisterForm(Request $request)
     {
-        return view('admin.register');
+        $token = $request->query('token');
+
+        if (!$token) {
+            return redirect()->route('admin.login')
+                ->with('error', 'Registration requires an invitation. Please contact an administrator.');
+        }
+
+        $invitation = AdminInvitation::where('token', $token)->first();
+
+        if (!$invitation) {
+            return redirect()->route('admin.login')
+                ->with('error', 'Invalid invitation token.');
+        }
+
+        if (!$invitation->isValid()) {
+            return redirect()->route('admin.login')
+                ->with('error', 'This invitation has expired or has already been used.');
+        }
+
+        return view('admin.register', compact('invitation'));
     }
 
     /**
@@ -70,16 +90,35 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
+            'token' => ['required', 'string'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:admins'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+
+        // Verify the invitation
+        $invitation = AdminInvitation::where('token', $validated['token'])->first();
+
+        if (!$invitation || !$invitation->isValid()) {
+            return redirect()->route('admin.login')
+                ->with('error', 'Invalid or expired invitation.');
+        }
+
+        // Verify the email matches the invitation
+        if ($invitation->email !== $validated['email']) {
+            return back()
+                ->withInput($request->only('name', 'email'))
+                ->with('error', 'You must use the email address that received the invitation.');
+        }
 
         $admin = Admin::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        // Mark invitation as accepted
+        $invitation->markAsAccepted();
 
         // Log in the admin so they can access the verification notice page
         Auth::guard('admin')->login($admin);
@@ -98,7 +137,10 @@ class AuthController extends Controller
             // Delete the admin account that was just created
             $admin->delete();
 
-            return redirect()->route('admin.register')
+            // Reset invitation so it can be used again
+            $invitation->update(['accepted_at' => null]);
+
+            return redirect()->route('admin.register', ['token' => $validated['token']])
                 ->withInput($request->only('name', 'email'))
                 ->with('error', 'Registration failed: Unable to send verification email. Please try again or contact support.');
         }

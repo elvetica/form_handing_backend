@@ -39,6 +39,13 @@ class VerificationController extends Controller
 
         // Check if already verified
         if ($admin->hasVerifiedEmail()) {
+            // Log out if currently logged in
+            if (Auth::guard('admin')->check()) {
+                Auth::guard('admin')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+
             return redirect()->route('admin.login')
                 ->with('info', 'Your email is already verified. Please login.');
         }
@@ -46,6 +53,13 @@ class VerificationController extends Controller
         // Mark as verified
         if ($admin->markEmailAsVerified()) {
             event(new Verified($admin));
+        }
+
+        // Log out the user so they can log in fresh with verified email
+        if (Auth::guard('admin')->check()) {
+            Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return redirect()->route('admin.login')
