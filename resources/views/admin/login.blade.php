@@ -12,6 +12,24 @@
     <div class="bg-white p-6 sm:p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6 text-center">Admin Login</h1>
 
+        @if (session('error'))
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                <p>{{ session('error') }}</p>
+            </div>
+        @endif
+
+        @if (session('info'))
+            <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+                <p>{{ session('info') }}</p>
+            </div>
+        @endif
+
+        @if (session('success'))
+            <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+                <p>{{ session('success') }}</p>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
                 <ul class="list-disc list-inside">
@@ -51,6 +69,12 @@
                         class="w-4 h-4 rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
                     <span class="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
+            </div>
+
+            <div class="mb-6 text-right">
+                <a href="{{ route('admin.password.request') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                    Forgot your password?
+                </a>
             </div>
 
             <button type="submit"

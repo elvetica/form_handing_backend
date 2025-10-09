@@ -40,11 +40,13 @@
         </div>
 
         <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <a href="{{ route('admin.admins.edit', $admin->id) }}"
-                class="inline-block w-full sm:w-auto text-center bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                Edit
-            </a>
-            @if($admin->id !== auth('admin')->id())
+            @can('update', $admin)
+                <a href="{{ route('admin.admins.edit', $admin->id) }}"
+                    class="inline-block w-full sm:w-auto text-center bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Edit
+                </a>
+            @endcan
+            @can('delete', $admin)
                 <form method="POST" action="{{ route('admin.admins.destroy', $admin->id) }}" class="inline w-full sm:w-auto"
                     onsubmit="return confirm('Are you sure you want to delete this admin? This action cannot be easily undone.');">
                     @csrf
@@ -54,7 +56,7 @@
                         Delete
                     </button>
                 </form>
-            @endif
+            @endcan
         </div>
     </div>
 @endsection

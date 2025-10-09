@@ -21,7 +21,6 @@ class Admin extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
-        'email_verified_at',
         'password',
     ];
 
@@ -45,7 +44,16 @@ class Admin extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if the admin is a super admin.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_super_admin === true;
     }
 
     /**

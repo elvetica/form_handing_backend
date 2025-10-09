@@ -56,16 +56,18 @@
                                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                     <a href="{{ route('admin.admins.show', $admin->id) }}"
                                         class="text-blue-600 hover:text-blue-900">View</a>
-                                    <a href="{{ route('admin.admins.edit', $admin->id) }}"
-                                        class="text-green-600 hover:text-green-900">Edit</a>
-                                    @if($admin->id !== auth('admin')->id())
+                                    @can('update', $admin)
+                                        <a href="{{ route('admin.admins.edit', $admin->id) }}"
+                                            class="text-green-600 hover:text-green-900">Edit</a>
+                                    @endcan
+                                    @can('delete', $admin)
                                         <form method="POST" action="{{ route('admin.admins.destroy', $admin->id) }}" class="inline"
                                             onsubmit="return confirm('Are you sure you want to delete this admin?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
                                         </form>
-                                    @endif
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

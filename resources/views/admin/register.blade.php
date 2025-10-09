@@ -12,6 +12,12 @@
     <div class="bg-white p-6 sm:p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 class="text-xl sm:text-2xl font-bold text-gray-800 mb-6 text-center">Admin Registration</h1>
 
+        @if(isset($invitation))
+            <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
+                <p class="text-sm">You're registering with: <strong>{{ $invitation->email }}</strong></p>
+            </div>
+        @endif
+
         @if (session('error'))
             <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
                 <p>{{ session('error') }}</p>
@@ -37,6 +43,10 @@
         <form method="POST" action="{{ route('admin.register') }}">
             @csrf
 
+            @if(isset($invitation))
+                <input type="hidden" name="token" value="{{ $invitation->token }}">
+            @endif
+
             <div class="mb-4">
                 <label for="name" class="block text-gray-700 font-medium mb-2">Name</label>
                 <input type="text" id="name" name="name" value="{{ old('name') }}" required autofocus
@@ -49,8 +59,9 @@
 
             <div class="mb-4">
                 <label for="email" class="block text-gray-700 font-medium mb-2">Email</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" required
-                    class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                <input type="email" id="email" name="email" value="{{ old('email', $invitation->email ?? '') }}"
+                    required @if(isset($invitation)) readonly @endif
+                    class="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @if(isset($invitation)) bg-gray-100 @endif"
                     placeholder="admin@example.com">
                 @error('email')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>

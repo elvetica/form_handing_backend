@@ -81,6 +81,13 @@ class AuthController extends Controller
                 ->with('error', 'This invitation has expired or has already been used.');
         }
 
+        // Log out any currently authenticated admin
+        if (Auth::guard('admin')->check()) {
+            Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         return view('admin.register', compact('invitation'));
     }
 

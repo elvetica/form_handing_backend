@@ -58,6 +58,9 @@ class AdminController extends Controller
                 ->with('error', 'Admin not found.');
         }
 
+        // Check authorization
+        $this->authorize('update', $admin);
+
         return view('admin.admins.edit', compact('admin'));
     }
 
@@ -72,6 +75,9 @@ class AdminController extends Controller
             return redirect()->route('admin.admins.index')
                 ->with('error', 'Admin not found.');
         }
+
+        // Check authorization
+        $this->authorize('update', $admin);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -104,11 +110,8 @@ class AdminController extends Controller
                 ->with('error', 'Admin not found.');
         }
 
-        // Prevent deleting yourself
-        if ($admin->id === auth('admin')->id()) {
-            return redirect()->route('admin.admins.index')
-                ->with('error', 'You cannot delete your own account.');
-        }
+        // Check authorization
+        $this->authorize('delete', $admin);
 
         $admin->delete();
 
